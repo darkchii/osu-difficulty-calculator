@@ -64,6 +64,13 @@ namespace osu.Server.DifficultyCalculator.Commands
                 return;
             }
 
+            reporter.Output($"INSERT_BEATMAPS: {AppSettings.INSERT_BEATMAPS}");
+            reporter.Output($"SKIP_INSERT_ATTRIBUTES: {AppSettings.SKIP_INSERT_ATTRIBUTES}");
+            reporter.Output($"BEATMAPS_PATH: {AppSettings.BEATMAPS_PATH}");
+            reporter.Output($"ALLOW_DOWNLOAD: {AppSettings.ALLOW_DOWNLOAD}");
+            reporter.Output($"DOWNLOAD_PATH: {AppSettings.DOWNLOAD_PATH}");
+            reporter.Output($"SAVE_DOWNLOADED: {AppSettings.SAVE_DOWNLOADED}");
+
             threadBeatmapIds = new int[Concurrency];
 
             var beatmaps = new ConcurrentQueue<int>(GetBeatmaps());
