@@ -22,7 +22,9 @@ namespace osu.Server.DifficultyCalculator
     {
         public static WorkingBeatmap GetBeatmap(int beatmapId, bool verbose = false, bool forceDownload = true, IReporter? reporter = null)
         {
-            string fileLocation = Path.Combine(AppSettings.BEATMAPS_PATH, beatmapId.ToString()) + ".osu";
+            //trim beatmaps_path
+            string path = AppSettings.BEATMAPS_PATH.TrimEnd();
+            string fileLocation = Path.Combine(path, beatmapId.ToString()) + ".osu";
 
             if ((forceDownload || !File.Exists(fileLocation)) && AppSettings.ALLOW_DOWNLOAD)
             {
