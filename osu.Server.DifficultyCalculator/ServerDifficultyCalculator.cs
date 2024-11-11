@@ -75,7 +75,7 @@ namespace osu.Server.DifficultyCalculator
 
                 using (var conn = Database.GetSlaveConnection())
                 {
-                    ranked = conn.QuerySingleOrDefault<int>("SELECT `approved` FROM `osu_beatmaps` WHERE `beatmap_id` = @BeatmapId", new
+                    ranked = conn.QuerySingleOrDefault<int>("SELECT `approved` FROM `beatmap` WHERE `beatmap_id` = @BeatmapId", new
                     {
                         BeatmapId = beatmap.BeatmapInfo.OnlineID
                     }) > 0;
@@ -122,7 +122,7 @@ namespace osu.Server.DifficultyCalculator
                         Diff = attribute.StarRating
                     });
 
-                if (beatmap.Ranked && !AppSettings.SKIP_INSERT_ATTRIBUTES)
+                if (!AppSettings.SKIP_INSERT_ATTRIBUTES)
                 {
                     var parameters = new List<object>();
 

@@ -41,9 +41,9 @@ namespace osu.Server.DifficultyCalculator
         static AppSettings()
         {
             INSERT_BEATMAPS = Environment.GetEnvironmentVariable("INSERT_BEATMAPS") == "1";
-            SKIP_INSERT_ATTRIBUTES = Environment.GetEnvironmentVariable("SKIP_INSERT_ATTRIBUTES") == "1";
-            ALLOW_DOWNLOAD = Environment.GetEnvironmentVariable("ALLOW_DOWNLOAD") == "1";
-            SAVE_DOWNLOADED = Environment.GetEnvironmentVariable("SAVE_DOWNLOADED") == "1";
+            SKIP_INSERT_ATTRIBUTES = Environment.GetEnvironmentVariable("SKIP_INSERT_ATTRIBUTES") == "0";
+            ALLOW_DOWNLOAD = Environment.GetEnvironmentVariable("ALLOW_DOWNLOAD") == "0";
+            SAVE_DOWNLOADED = Environment.GetEnvironmentVariable("SAVE_DOWNLOADED") == "0";
 
             BEATMAPS_PATH = Environment.GetEnvironmentVariable("BEATMAPS_PATH") ?? "osu";
             DOWNLOAD_PATH = Environment.GetEnvironmentVariable("BEATMAP_DOWNLOAD_PATH") ?? "https://osu.ppy.sh/osu/{0}";

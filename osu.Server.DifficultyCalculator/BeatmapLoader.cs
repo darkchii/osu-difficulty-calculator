@@ -66,7 +66,7 @@ namespace osu.Server.DifficultyCalculator
             }
 
             if (!File.Exists(fileLocation))
-                throw new Exception("Beatmap file does not exist and was not downloaded.");
+                throw new Exception("Beatmap file does not exist and was not downloaded. (Location: " + fileLocation + ")");
 
             return new LoaderWorkingBeatmap(fileLocation);
         }
