@@ -25,6 +25,25 @@ namespace osu.Server.DifficultyCalculator
         private readonly bool dryRun;
         private readonly List<Ruleset> processableRulesets = new List<Ruleset>();
 
+        static Dictionary<int, string> AttributeMapping = new Dictionary<int, string>()
+        {
+            {1, "diff_aim" },
+            {3, "diff_speed" },
+            {5, "od" },
+            {7,"ar" },
+            {9, "max_combo" },
+            {11, "diff_strain" },
+            {13, "hit300" },
+            {15, "score_multiplier" },
+            {17, "flashlight_rating" },
+            {19, "slider_factor" },
+            {21, "speed_note_count" },
+            {23, "speed_difficult_strain_count" },
+            {25, "aim_difficult_strain_count" },
+            {27, "hit100" },
+            {29, "mono_stamina_factor" }
+        };
+
         public ServerDifficultyCalculator(int[]? rulesetIds = null, bool processConverts = true, bool dryRun = false)
         {
             this.processConverts = processConverts;
@@ -111,9 +130,9 @@ namespace osu.Server.DifficultyCalculator
                 LegacyMods legacyMods = beatmap.Ruleset.ConvertToLegacyMods(attribute.Mods);
 
                 conn.Execute(
-                    "INSERT INTO `osu_beatmap_difficulty` (`beatmap_id`, `mode`, `mods`, `diff_unified`) "
-                    + "VALUES (@BeatmapId, @Mode, @Mods, @Diff) "
-                    + "ON DUPLICATE KEY UPDATE `diff_unified` = @Diff",
+                "INSERT INTO `osu_beatmap_difficulty_data` (`beatmap_id`, `mode`, `mods`, `diff_unified`) "
+                + "VALUES (@BeatmapId, @Mode, @Mods, @Diff) "
+                + "ON DUPLICATE KEY UPDATE `diff_unified` = @Diff",
                     new
                     {
                         BeatmapId = beatmap.BeatmapID,
@@ -122,27 +141,49 @@ namespace osu.Server.DifficultyCalculator
                         Diff = attribute.StarRating
                     });
 
+                //output to console for debug
+                //Console.WriteLine($"INSERT INTO `osu_beatmap_difficulty_data` (`beatmap_id`, `mode`, `mods`, `diff_unified`) "
+                //    + $"VALUES ({beatmap.BeatmapID}, {beatmap.RulesetID}, {(int)legacyMods}, {attribute.StarRating}) "
+                //    + $"ON DUPLICATE KEY UPDATE `diff_unified` = {attribute.StarRating}");
+
                 if (!AppSettings.SKIP_INSERT_ATTRIBUTES)
                 {
                     var parameters = new List<object>();
 
                     foreach (var mapping in attribute.ToDatabaseAttributes())
                     {
+                        string attrib_string = AttributeMapping[mapping.attributeId];
+
                         parameters.Add(new
                         {
                             BeatmapId = beatmap.BeatmapID,
                             Mode = beatmap.RulesetID,
                             Mods = (int)legacyMods,
-                            Attribute = mapping.attributeId,
-                            Value = Convert.ToSingle(mapping.value)
+                            Attribute = attrib_string,
+                            Value = mapping.value
                         });
                     }
 
-                    conn.Execute(
-                        "INSERT INTO `osu_beatmap_difficulty_attribs` (`beatmap_id`, `mode`, `mods`, `attrib_id`, `value`) "
-                        + "VALUES (@BeatmapId, @Mode, @Mods, @Attribute, @Value) "
-                        + "ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
-                        parameters.ToArray());
+                    //we want to insert or update the value of the attribute in osu_beatmap_difficulty_data
+                    //attribute in parameters is the column name in the database
+                    //so if .Attribute = "diff_aim" then the column in the database is diff_aim
+                    //mapping.value is the value of the attribute
+
+                    //string query = "INSERT INTO `osu_beatmap_difficulty_data` (`beatmap_id`, `mode`, `mods`, @Attribute) "
+                    //    + "VALUES (@BeatmapId, @Mode, @Mods, @Value) "
+                    //    + "ON DUPLICATE KEY UPDATE @Attribute = @Value";
+                    //conn.Execute(query, parameters);
+
+                    //seperate parameters into groups by Attribute
+                    var groupedParameters = parameters.GroupBy(p => p.GetType().GetProperty("Attribute").GetValue(p, null)).ToList();
+
+                    foreach (var group in groupedParameters)
+                    {
+                        string query = "INSERT INTO `osu_beatmap_difficulty_data` (`beatmap_id`, `mode`, `mods`, " + group.Key + ") "
+                            + "VALUES (@BeatmapId, @Mode, @Mods, @Value) "
+                            + "ON DUPLICATE KEY UPDATE " + group.Key + " = @Value";
+                        conn.Execute(query, group);
+                    }
                 }
 
                 if (legacyMods == LegacyMods.None && beatmap.Ruleset.RulesetInfo.Equals(beatmap.Beatmap.BeatmapInfo.Ruleset))
@@ -162,21 +203,21 @@ namespace osu.Server.DifficultyCalculator
                         MaxCombo = attribute.MaxCombo,
                     };
 
-                    if (AppSettings.INSERT_BEATMAPS)
-                    {
-                        conn.Execute(
-                            "INSERT INTO `osu_beatmaps` (`beatmap_id`, `difficultyrating`, `diff_approach`, `diff_overall`, `diff_drain`, `diff_size`, `bpm`, `max_combo`) "
-                            + "VALUES (@BeatmapId, @Diff, @AR, @OD, @HP, @CS, @BPM, @MaxCombo) "
-                            + "ON DUPLICATE KEY UPDATE `difficultyrating` = @Diff, `diff_approach` = @AR, `diff_overall` = @OD, `diff_drain` = @HP, `diff_size` = @CS, `bpm` = @BPM, `max_combo` = @MaxCombo",
-                            param);
-                    }
-                    else
-                    {
-                        conn.Execute(
-                            "UPDATE `osu_beatmaps` SET `difficultyrating` = @Diff, `diff_approach` = @AR, `diff_overall` = @OD, `diff_drain` = @HP, `diff_size` = @CS, `bpm` = @BPM , `max_combo` = @MaxCombo "
-                            + "WHERE `beatmap_id` = @BeatmapId",
-                            param);
-                    }
+                    //if (AppSettings.INSERT_BEATMAPS)
+                    //{
+                    //    conn.Execute(
+                    //        "INSERT INTO `osu_beatmaps` (`beatmap_id`, `difficultyrating`, `diff_approach`, `diff_overall`, `diff_drain`, `diff_size`, `bpm`, `max_combo`) "
+                    //        + "VALUES (@BeatmapId, @Diff, @AR, @OD, @HP, @CS, @BPM, @MaxCombo) "
+                    //        + "ON DUPLICATE KEY UPDATE `difficultyrating` = @Diff, `diff_approach` = @AR, `diff_overall` = @OD, `diff_drain` = @HP, `diff_size` = @CS, `bpm` = @BPM, `max_combo` = @MaxCombo",
+                    //        param);
+                    //}
+                    //else
+                    //{
+                    //    conn.Execute(
+                    //        "UPDATE `osu_beatmaps` SET `difficultyrating` = @Diff, `diff_approach` = @AR, `diff_overall` = @OD, `diff_drain` = @HP, `diff_size` = @CS, `bpm` = @BPM , `max_combo` = @MaxCombo "
+                    //        + "WHERE `beatmap_id` = @BeatmapId",
+                    //        param);
+                    //}
                 }
             }
         }
